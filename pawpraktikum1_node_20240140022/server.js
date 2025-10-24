@@ -1,17 +1,34 @@
-const express = require('express');
-
+const express = require("express");
+const cors = require("cors");
+const morgan = require("morgan");
 const app = express();
+const PORT = 3001;
 
-const port = 5000;
+// ✅ Impor router — HANYA SEKALI!
+const presensiRoutes = require("./routes/presensi");
+const reportRoutes = require("./routes/reports");
 
-
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Hello from Server!' 
-  });
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(morgan("dev"));
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
 });
 
-app.listen(port, () => {
-  console.log(`Node.js Server Project (Tugas 2) berjalan di http://localhost:${port}`);
-  console.log('Endpoint GET / siap melayani dengan pesan JSON.');
+// Route dasar
+app.get("/", (req, res) => {
+  res.send("Home Page for API");
 });
+
+// Gunakan router
+app.use("/api/presensi", presensiRoutes);
+app.use("/api/reports", reportRoutes);
+
+// Jalankan server
+app.listen(PORT, () => {
+  console.log(`✅ Server berjalan di http://localhost:${PORT}`);
+});
+
+module.exports = app;
