@@ -3,8 +3,6 @@ const router = express.Router();
 const presensiController = require("../controllers/presensiController");
 const { addUserData } = require("../middleware/permissionMiddleware");
 router.use(addUserData);
-router.post("/check-in", presensiController.CheckIn);
-router.post("/check-out", presensiController.CheckOut);
 
 router.post('/', (req, res) => {
     console.log("Request body:", req.body);
