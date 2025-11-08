@@ -8,6 +8,8 @@ const PORT = 3001;
 const presensiRoutes = require("./routes/presensi");
 const reportRoutes = require("./routes/reports");
 
+const authRoutes = require('./routes/auth');
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -25,6 +27,7 @@ app.get("/", (req, res) => {
 // Gunakan router
 app.use("/api/presensi", presensiRoutes);
 app.use("/api/reports", reportRoutes);
+app.use('/api/auth', authRoutes);
 
 // Jalankan server
 app.listen(PORT, () => {
