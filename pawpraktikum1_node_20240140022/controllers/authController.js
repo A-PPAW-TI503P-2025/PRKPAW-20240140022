@@ -1,41 +1,53 @@
-const { User } = require('../models');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');	
-const JWT_SECRET = 'INI_ADALAH_KUNCI_RAHASIA_ANDA_YANG_SANGAT_AMAN';
+require("dotenv").config();
+const { User } = require("../models");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+//const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = "INI_ADALAH_KUNCI_RAHASIA_YANG_SANGAT_AMAN_123!";
 
 exports.register = async (req, res) => {
   try {
     const { nama, email, password, role } = req.body;
 
     if (!nama || !email || !password) {
-      return res.status(400).json({ message: "Nama, email, dan password harus diisi" });
+      return res.status(400).json({ message: "Nama, email, dan password harus diisi." });
     }
 
     if (role && !['mahasiswa', 'admin'].includes(role)) {
       return res.status(400).json({ message: "Role tidak valid. Harus 'mahasiswa' atau 'admin'." });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10); 
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(409).json({ message: "Email sudah terdaftar." });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = await User.create({
-      nama,
+      nama,         
       email,
       password: hashedPassword,
-      role: role || 'mahasiswa' 
+      role: role || 'mahasiswa'
     });
 
     res.status(201).json({
       message: "Registrasi berhasil",
-      data: { id: newUser.id, email: newUser.email, role: newUser.role }
+      data: { id: newUser.id, nama: newUser.nama, email: newUser.email, role: newUser.role }
     });
 
   } catch (error) {
+    console.error("Registrasi error:", error); 
+
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(400).json({ message: "Email sudah terdaftar." });
     }
+    if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeDatabaseError') {
+      return res.status(400).json({ message: "Data tidak valid: " + (error.message || "Periksa input Anda.") });
+    }
+
     res.status(500).json({ message: "Terjadi kesalahan pada server", error: error.message });
   }
 };
-
 
 exports.login = async (req, res) => {
   try {
@@ -54,19 +66,20 @@ exports.login = async (req, res) => {
     const payload = {
       id: user.id,
       nama: user.nama,
-      role: user.role 
+      role: user.role
     };
 
     const token = jwt.sign(payload, JWT_SECRET, {
-      expiresIn: '1h' 
+      expiresIn: "1h"
     });
 
-    res.json({
+    res.status(200).json({
       message: "Login berhasil",
-      token: token 
+      token: token
     });
 
   } catch (error) {
-    res.status(500).json({ message: "Terjadi kesalahan pada server", error: error.message });
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Terjadi kesalahan pada server." });
   }
 };

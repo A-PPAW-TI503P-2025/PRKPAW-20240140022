@@ -1,8 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const presensiController = require("../controllers/presensiController");
-const { addUserData } = require("../middleware/permissionMiddleware");
-router.use(addUserData);
+const { authenticateToken } = require("../middleware/permissionMiddleware");
+
+router.use(authenticateToken);
 
 router.post('/', (req, res) => {
     console.log("Request body:", req.body);

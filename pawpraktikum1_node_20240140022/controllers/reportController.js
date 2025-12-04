@@ -1,51 +1,38 @@
-const { Presensi } = require("../models");
-const { Op } = require('sequelize'); 
+const { Presensi, User } = require("../models");
+const { Op } = require("sequelize");
+const { format } = require("date-fns-tz");
 
 exports.getDailyReport = async (req, res) => {
   try {
-    const { nama, tanggalMulai, tanggalSelesai } = req.query;
+    const { nama } = req.query;
 
-    let options = { 
-        where: {},
+    let options = {
+      include: [
+        {
+          model: User,
+          as: "user",
+          attributes: ["nama"],
+        },
+      ],
     };
 
     if (nama) {
-        options.where.nama = {
-            [Op.like]: `%${nama}%`,
-        };
+      options.include[0].where = {
+        nama: {
+          [Op.like]: `%${nama}%`,
+        },
+      };
     }
 
-      // Filter Berdasarkan Rentang Tanggal (Op.between)
-    if (tanggalMulai && tanggalSelesai) {
-      options.where.checkIn = {
-          [Op.between]: [new Date(tanggalMulai), new Date(tanggalSelesai)],
-      };
-      } else if (tanggalMulai) {
-      options.where.checkIn = {
-          [Op.gte]: new Date(tanggalMulai),
-      };
-      } else if (tanggalSelesai) {
-      options.where.checkIn = {
-          [Op.lte]: new Date(tanggalSelesai),}
-      };
+    const records = await Presensi.findAll(options);
 
-      // Ambil data dari database
-      const records = await Presensi.findAll(options);
-
-      // Kirim respon sukses
-      res.json({
-          reportDate: new Date().toLocaleDateString(),
-          filterUsed: { nama, tanggalMulai, tanggalSelesai }, // Tunjukkan filter yang digunakan
-          data: records,
-      });
-
+    res.json({
+      reportDate: new Date().toLocaleDateString(),
+      data: records,
+    });
   } catch (error) {
-    // Penanganan error server
     res
-        .status(500)
-        .json({ 
-            message: "Gagal mengambil laporan presensi.", 
-            error: error.message 
-        });
+      .status(500)
+      .json({ message: "Gagal mengambil laporan", error: error.message });
   }
 };
