@@ -1,32 +1,58 @@
 const { Presensi, User } = require("../models");
 const { format } = require("date-fns-tz");
 const { Op } = require("sequelize");
-const timeZone = "Asia/Jakarta"; 
+const multer = require("multer");
+const path = require("path");
+const timeZone = "Asia/Jakarta";
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/"); 
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${req.user.id}-${Date.now()}${path.extname(file.originalname)}`);
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image/")) {
+    cb(null, true);
+  } else {
+    cb(new Error("Hanya file gambar yang diperbolehkan!"), false);
+  }
+};
+
+exports.upload = multer({ storage: storage, fileFilter: fileFilter });
 
 const formatDate = (date) => {
   return format(new Date(date), "yyyy-MM-dd HH:mm:ssXXX", { timeZone });
 };
 
+
 exports.CheckIn = async (req, res) => {
   try {
     if (!req.user || !req.user.id) {
-      return res.status(401).json({ message: "Token tidak valid atau tidak ditemukan." });
+      return res
+        .status(401)
+        .json({ message: "Token tidak valid atau tidak ditemukan." });
     }
 
     const userId = req.user.id;
     const waktuSekarang = new Date();
 
-    const latStr = req.body.latitude;
-    const lngStr = req.body.longitude;
+    const { latitude, longitude } = req.body;
 
-    const lat = parseFloat(latStr);
-    const lng = parseFloat(lngStr);
+    const buktiFoto = req.file ? req.file.path : null;
 
-    if (isNaN(lat) || isNaN(lng)) {
+    const lat = latitude !== undefined ? parseFloat(latitude) : null;
+    const lng = longitude !== undefined ? parseFloat(longitude) : null;
+
+    if (lat === null || lng === null || isNaN(lat) || isNaN(lng)) {
       return res.status(400).json({
         message: "Latitude dan longitude harus berupa angka.",
       });
     }
+
 
     const recordAktif = await Presensi.findOne({
       where: {
@@ -44,8 +70,9 @@ exports.CheckIn = async (req, res) => {
     const newRecord = await Presensi.create({
       userId,
       checkIn: waktuSekarang,
-      latitude: lat,  
-      longitude: lng,     
+      latitude: lat,
+      longitude: lng,
+      buktiFoto, 
     });
 
     const user = await User.findByPk(userId, { attributes: ["nama"] });
@@ -63,6 +90,7 @@ exports.CheckIn = async (req, res) => {
         checkOut: null,
         latitude: newRecord.latitude,
         longitude: newRecord.longitude,
+        buktiFoto: newRecord.buktifoto, 
       },
     });
   } catch (error) {
@@ -74,10 +102,13 @@ exports.CheckIn = async (req, res) => {
   }
 };
 
+
 exports.CheckOut = async (req, res) => {
   try {
     if (!req.user || !req.user.id) {
-      return res.status(401).json({ message: "Token tidak valid atau tidak ditemukan." });
+      return res
+        .status(401)
+        .json({ message: "Token tidak valid atau tidak ditemukan." });
     }
 
     const userId = req.user.id;
@@ -115,6 +146,7 @@ exports.CheckOut = async (req, res) => {
         checkOut: formatDate(recordToUpdate.checkOut),
         latitude: recordToUpdate.latitude,
         longitude: recordToUpdate.longitude,
+        buktiFoto: recordToUpdate.buktifoto,
       },
     });
   } catch (error) {
@@ -131,7 +163,7 @@ exports.deletePresensi = async (req, res) => {
   try {
     const { id: userId } = req.user;
     const presensiId = req.params.id;
-    const recordToDelete = await Presensi.findByPk(presensiId);
+    const recordToDelete = await Presensi.findByTk(presensiId);
 
     if (!recordToDelete) {
       return res
@@ -146,16 +178,16 @@ exports.deletePresensi = async (req, res) => {
     await recordToDelete.destroy();
     res.status(200).json({ message: "Data berhasil dihapus" });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Terjadi kesalahan pada server", error: error.message });
+    res.status(500).json({
+      message: "Terjadi kesalahan pada server",
+      error: error.message,
+    });
   }
 };
 
-exports.updatePresensi = async (req, res) =>{
+exports.updatePresensi = async (req, res) => {
   try {
     const presensiId = req.params.id;
-
     const { checkIn, checkOut } = req.body;
 
     if (checkIn === undefined && checkOut === undefined) {
@@ -182,8 +214,9 @@ exports.updatePresensi = async (req, res) =>{
       data: recordToUpdate,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Terjadi kesalahan pada server", error: error.message });
+    res.status(500).json({
+      message: "Terjadi kesalahan pada server",
+      error: error.message,
+    });
   }
 };

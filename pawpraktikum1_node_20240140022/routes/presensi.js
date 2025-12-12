@@ -5,13 +5,15 @@ const { authenticateToken } = require("../middleware/permissionMiddleware");
 
 router.use(authenticateToken);
 
+router.post('/check-in', [authenticateToken, presensiController.upload.single('image')], presensiController.CheckIn);
+
 router.post('/', (req, res) => {
-    console.log("Request body:", req.body);
-    res.status(201).json({ message: "Presensi berhasil dicatat!" });
+  console.log("Request body:", req.body);
+  res.status(201).json({ message: "Presensi berhasil dicatat!" });
 });
 
 router.get('/', (req, res) => {
-    res.status(200).json({ message: "Ini adalah endpoint untuk GET semua data presensi" });
+  res.status(200).json({ message: "Ini adalah endpoint untuk GET semua data presensi" });
 });
 
 router.get("/check-in", (req, res) => {
@@ -21,7 +23,6 @@ router.get("/check-in", (req, res) => {
   });
 });
 
-router.post("/check-in", presensiController.CheckIn);
 router.post("/check-out", presensiController.CheckOut);
 
 router.put("/:id", presensiController.updatePresensi);
