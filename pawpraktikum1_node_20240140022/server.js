@@ -12,6 +12,9 @@ const authRoutes = require('./routes/auth');
 const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+const iotRoutes = require("./routes/iot");
+app.use("/api/iot", iotRoutes);
+
 app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
